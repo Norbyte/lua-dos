@@ -30,7 +30,7 @@ LUAI_DDEF const char *const luaT_typenames_[LUA_TOTALTAGS] = {
   "no value",
   "nil", "boolean", udatatypename, "number",
   "string", "table", "function", udatatypename, "thread",
-  "proto" /* this last case is used for tests only */
+  udatatypename, udatatypename, "proto" /* this last case is used for tests only */
 };
 
 
@@ -42,7 +42,7 @@ void luaT_init (lua_State *L) {
     "__div", "__idiv",
     "__band", "__bor", "__bxor", "__shl", "__shr",
     "__unm", "__bnot", "__lt", "__le",
-    "__concat", "__call"
+    "__concat", "__call", "__pairs", "__tostring"
   };
   int i;
   for (i=0; i<TM_N; i++) {
@@ -76,6 +76,14 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
     case LUA_TUSERDATA:
       mt = uvalue(o)->metatable;
       break;
+    case LUA_TLIGHTCPPOBJECT: {
+      CMetatable* cmt = L->cppGetLightMetatable(L, lcppvalue(o), valextra(o));
+      return cmt ? &cmt->funcs[event] : luaO_nilobject;
+    }
+    case LUA_TCPPOBJECT: {
+      CMetatable* cmt = L->cppGetMetatable(L, cppvalue(o), valextra(o));
+      return cmt ? &cmt->funcs[event] : luaO_nilobject;
+    }
     default:
       mt = G(L)->mt[ttnov(o)];
   }

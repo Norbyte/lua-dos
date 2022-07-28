@@ -49,6 +49,8 @@
 
 #define luaM_newobject(L,tag,s)	luaM_realloc_(L, NULL, tag, (s))
 
+#define luaM_newcppobject(L,s)	luaM_alloccppmem(L, (s))
+
 #define luaM_growvector(L,v,nelems,size,t,limit,e) \
           if ((nelems)+1 > (size)) \
             ((v)=cast(t *, luaM_growaux_(L,v,&(size),sizeof(t),limit,e)))
@@ -65,5 +67,7 @@ LUAI_FUNC void *luaM_growaux_ (lua_State *L, void *block, int *size,
                                size_t size_elem, int limit,
                                const char *what);
 
-#endif
+LUAI_FUNC void* luaM_alloccppmem(lua_State * L, size_t size);
+LUAI_FUNC void luaM_freecppmem(lua_State * L, void* block, size_t size);
 
+#endif

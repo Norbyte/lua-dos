@@ -57,7 +57,7 @@ const char lua_ident[] =
 	api_check(l, isstackindex(i, o), "index not in the stack")
 
 
-static TValue *index2addr (lua_State *L, int idx) {
+TValue *index2addr (lua_State *L, int idx) {
   CallInfo *ci = L->ci;
   if (idx > 0) {
     TValue *o = ci->func + idx;
@@ -140,6 +140,44 @@ LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf) {
   return old;
 }
 
+
+LUA_API void (lua_setup_cppobjects)(lua_State* L, lua_CppAlloc alloc, lua_CppFree free,
+    lua_CppGetLightMetatable getlightmeta, lua_CppGetMetatable getmeta) {
+    lua_lock(L);
+    L->cppAlloc = alloc;
+    L->cppFree = free;
+    L->cppGetLightMetatable = getlightmeta;
+    L->cppGetMetatable = getmeta;
+    lua_unlock(L);
+}
+
+
+LUA_API struct CMetatable* (lua_alloc_cmetatable)(lua_State* L) {
+    lua_lock(L);
+    CMetatable* mt = luaM_new(L, CMetatable);
+    for (unsigned i = 0; i < TM_N; i++) {
+        setnilvalue(&mt->funcs[i]);
+    }
+    lua_unlock(L);
+    return mt;
+}
+
+LUA_API void lua_cmetatable_set(lua_State* L, CMetatable* mt, int index, lua_CFunction func) {
+    lua_lock(L);
+    setfvalue(&mt->funcs[index], func);
+    lua_unlock(L);
+}
+
+LUA_API int lua_cmetatable_push(lua_State* L, CMetatable* mt, int index) {
+    TValue* fun = &mt->funcs[index];
+    if (ttisnil(fun)) return 0;
+
+    lua_lock(L);
+    setobj2s(L, L->top, fun);
+    api_incr_top(L);
+    lua_unlock(L);
+    return 1;
+}
 
 LUA_API const lua_Number *lua_version (lua_State *L) {
   static const lua_Number version = LUA_VERSION_NUM;
@@ -292,6 +330,12 @@ LUA_API int lua_isuserdata (lua_State *L, int idx) {
 }
 
 
+LUA_API int lua_iscppobject(lua_State *L, int idx) {
+  const TValue *o = index2addr(L, idx);
+  return (ttiscppobject(o) || ttislightcppobject(o));
+}
+
+
 LUA_API int lua_rawequal (lua_State *L, int index1, int index2) {
   StkId o1 = index2addr(L, index1);
   StkId o2 = index2addr(L, index2);
@@ -395,6 +439,7 @@ LUA_API size_t lua_rawlen (lua_State *L, int idx) {
     case LUA_TSHRSTR: return tsvalue(o)->shrlen;
     case LUA_TLNGSTR: return tsvalue(o)->u.lnglen;
     case LUA_TUSERDATA: return uvalue(o)->len;
+    case LUA_TCPPOBJECT: return cppvalue(o)->datalen;
     case LUA_TTABLE: return luaH_getn(hvalue(o));
     default: return 0;
   }
@@ -436,10 +481,30 @@ LUA_API const void *lua_topointer (lua_State *L, int idx) {
     case LUA_TTHREAD: return thvalue(o);
     case LUA_TUSERDATA: return getudatamem(uvalue(o));
     case LUA_TLIGHTUSERDATA: return pvalue(o);
+    case LUA_TCPPOBJECT: return getcppmem(cppvalue(o));
     default: return NULL;
   }
 }
 
+LUA_API unsigned long long lua_tolightcppobject(lua_State* L, int idx, unsigned long long* extra) {
+    StkId o = index2addr(L, idx);
+    if (ttype(o) == LUA_TLIGHTCPPOBJECT) {
+        *extra = valextra(o);
+        return lcppvalue(o);
+    } else {
+        return NULL;
+    }
+}
+
+LUA_API void* lua_tocppobject(lua_State* L, int idx, unsigned long long* extra) {
+    StkId o = index2addr(L, idx);
+    if (ttype(o) == LUA_TCPPOBJECT) {
+        *extra = valextra(o);
+        return getcppmem(cppvalue(o));
+    } else {
+        return NULL;
+    }
+}
 
 
 /*
@@ -578,6 +643,13 @@ LUA_API int lua_pushthread (lua_State *L) {
   return (G(L)->mainthread == L);
 }
 
+LUA_API void lua_pushlightcppobject(lua_State* L, unsigned long long c, unsigned long long extra) {
+    lua_lock(L);
+    setlightcppvalue(L->top, c);
+    setvalextra(L->top, extra);
+    api_incr_top(L);
+    lua_unlock(L);
+}
 
 
 /*
@@ -1193,6 +1265,17 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 }
 
 
+LUA_API void* lua_newcppobject(lua_State* L, unsigned long long c, 
+    unsigned long long extra, size_t size) {
+    CppUdata* cpp;
+    lua_lock(L);
+    cpp = luaS_newcppobject(L, size);
+    setcppvalue(L, L->top, cpp);
+    api_incr_top(L);
+    luaC_checkGC(L);
+    lua_unlock(L);
+    return getcppmem(cpp);
+}
 
 static const char *aux_upvalue (StkId fi, int n, TValue **val,
                                 CClosure **owner, UpVal **uv) {

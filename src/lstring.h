@@ -17,6 +17,9 @@
 #define sizeludata(l)	(sizeof(union UUdata) + (l))
 #define sizeudata(u)	sizeludata((u)->len)
 
+#define sizelcppobj(l)	(sizeof(union CppUUdata) + (l))
+#define sizecppobj(c)	sizelcppobj((c)->datalen)
+
 #define luaS_newliteral(L, s)	(luaS_newlstr(L, "" s, \
                                  (sizeof(s)/sizeof(char))-1))
 
@@ -41,6 +44,7 @@ LUAI_FUNC void luaS_clearcache (global_State *g);
 LUAI_FUNC void luaS_init (lua_State *L);
 LUAI_FUNC void luaS_remove (lua_State *L, TString *ts);
 LUAI_FUNC Udata *luaS_newudata (lua_State *L, size_t s);
+LUAI_FUNC CppUdata *luaS_newcppobject (lua_State *L, size_t s);
 LUAI_FUNC TString *luaS_newlstr (lua_State *L, const char *str, size_t l);
 LUAI_FUNC TString *luaS_new (lua_State *L, const char *str);
 LUAI_FUNC TString *luaS_createlngstrobj (lua_State *L, size_t l);

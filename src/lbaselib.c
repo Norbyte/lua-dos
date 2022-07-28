@@ -19,6 +19,9 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+#include "lstate.h"
+#include "lgc.h"
+#include "lapi.h"
 
 
 static int luaB_print (lua_State *L) {
@@ -206,16 +209,18 @@ static int luaB_type (lua_State *L) {
 }
 
 
-static int pairsmeta (lua_State *L, const char *method, int iszero,
-                      lua_CFunction iter) {
+static int pairsmeta (lua_State *L, lua_CFunction iter) {
   luaL_checkany(L, 1);
-  if (luaL_getmetafield(L, 1, method) == LUA_TNIL) {  /* no metamethod? */
+  auto val = index2addr(L, 1);
+  auto tm = luaT_gettmbyobj(L, val, TM_PAIRS);
+  if (tm == luaO_nilobject) {  /* no metamethod? */
     lua_pushcfunction(L, iter);  /* will return generator, */
     lua_pushvalue(L, 1);  /* state, */
-    if (iszero) lua_pushinteger(L, 0);  /* and initial value */
-    else lua_pushnil(L);
+    lua_pushnil(L);
   }
   else {
+    setobj2s(L, L->top, tm);
+    api_incr_top(L);
     lua_pushvalue(L, 1);  /* argument 'self' to metamethod */
     lua_call(L, 1, 3);  /* get 3 values from metamethod */
   }
@@ -236,7 +241,7 @@ static int luaB_next (lua_State *L) {
 
 
 static int luaB_pairs (lua_State *L) {
-  return pairsmeta(L, "__pairs", 0, luaB_next);
+  return pairsmeta(L, luaB_next);
 }
 
 
@@ -255,15 +260,11 @@ static int ipairsaux (lua_State *L) {
 ** (The given "table" may not be a table.)
 */
 static int luaB_ipairs (lua_State *L) {
-#if defined(LUA_COMPAT_IPAIRS)
-  return pairsmeta(L, "__ipairs", 1, ipairsaux);
-#else
   luaL_checkany(L, 1);
   lua_pushcfunction(L, ipairsaux);  /* iteration function */
   lua_pushvalue(L, 1);  /* state */
   lua_pushinteger(L, 0);  /* initial value */
   return 3;
-#endif
 }
 
 

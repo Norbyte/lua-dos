@@ -440,6 +440,15 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
         tm = fasttm(L, hvalue(t2)->metatable, TM_EQ);
       break;  /* will try TM */
     }
+    case LUA_TLIGHTCPPOBJECT: return lcppvalue(t1) == lcppvalue(t2);
+    case LUA_TCPPOBJECT: {
+        if (cppvalue(t1) == cppvalue(t2)) return 1;
+        else if (L == NULL) return 0;
+        tm = luaT_gettmbyobj(L, t1, TM_EQ);
+        if (tm == NULL)
+            tm = luaT_gettmbyobj(L, t2, TM_EQ);
+        break;  /* will try TM */
+    }
     default:
       return gcvalue(t1) == gcvalue(t2);
   }

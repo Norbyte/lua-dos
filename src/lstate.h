@@ -199,6 +199,10 @@ struct lua_State {
   unsigned short nCcalls;  /* number of nested C calls */
   l_signalT hookmask;
   lu_byte allowhook;
+  lua_CppGetMetatable cppGetMetatable;
+  lua_CppGetLightMetatable cppGetLightMetatable;
+  lua_CppAlloc cppAlloc;
+  lua_CppFree cppFree;
 };
 
 
@@ -216,6 +220,7 @@ union GCUnion {
   struct Table h;
   struct Proto p;
   struct lua_State th;  /* thread */
+  struct CppUdata cpp;
 };
 
 
@@ -232,6 +237,7 @@ union GCUnion {
 #define gco2t(o)  check_exp((o)->tt == LUA_TTABLE, &((cast_u(o))->h))
 #define gco2p(o)  check_exp((o)->tt == LUA_TPROTO, &((cast_u(o))->p))
 #define gco2th(o)  check_exp((o)->tt == LUA_TTHREAD, &((cast_u(o))->th))
+#define gco2cpp(o)  check_exp((o)->tt == LUA_TCPPOBJECT, &((cast_u(o))->cpp))
 
 
 /* macro to convert a Lua object into a GCObject */

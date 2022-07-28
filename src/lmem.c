@@ -98,3 +98,20 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   return newblock;
 }
 
+
+void* luaM_alloccppmem(lua_State* L, size_t size) {
+    global_State* g = G(L);
+    void* newblock = L->cppAlloc(L, size);
+    if (newblock == NULL) {
+        luaD_throw(L, LUA_ERRMEM);
+    }
+
+    g->GCdebt += size;
+    return newblock;
+}
+
+void luaM_freecppmem(lua_State* L, void* block, size_t size) {
+    global_State* g = G(L);
+    L->cppFree(L, block, size);
+    g->GCdebt -= size;
+}

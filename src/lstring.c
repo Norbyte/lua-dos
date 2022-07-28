@@ -246,3 +246,15 @@ Udata *luaS_newudata (lua_State *L, size_t s) {
   return u;
 }
 
+
+CppUdata *luaS_newcppobject (lua_State *L, size_t s) {
+  CppUdata *cpp;
+  GCObject *o;
+  if (s > MAX_SIZE - sizeof(CppUdata))
+    luaM_toobig(L);
+  o = luaC_newcppobj(L, LUA_TCPPOBJECT, sizelcppobj(s));
+  cpp = gco2cpp(o);
+  cpp->datalen = (unsigned int)s;
+  return cpp;
+}
+

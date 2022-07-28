@@ -215,6 +215,16 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
   return o;
 }
 
+GCObject *luaC_newcppobj (lua_State *L, int tt, size_t sz) {
+  global_State *g = G(L);
+  GCObject *o = cast(GCObject *, luaM_newcppobject(L, sz));
+  o->marked = luaC_white(g);
+  o->tt = tt;
+  o->next = g->allgc;
+  g->allgc = o;
+  return o;
+}
+
 /* }====================================================== */
 
 
@@ -256,6 +266,11 @@ static void reallymarkobject (global_State *g, GCObject *o) {
         o = gcvalue(&uvalue);
         goto reentry;
       }
+      break;
+    }
+    case LUA_TCPPOBJECT: {
+      gray2black(o);
+      g->GCmemtrav += sizecppobj(gco2cpp(o));
       break;
     }
     case LUA_TLCL: {
@@ -708,6 +723,7 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_TTABLE: luaH_free(L, gco2t(o)); break;
     case LUA_TTHREAD: luaE_freethread(L, gco2th(o)); break;
     case LUA_TUSERDATA: luaM_freemem(L, o, sizeudata(gco2u(o))); break;
+    case LUA_TCPPOBJECT: luaM_freecppmem(L, gco2cpp(o), sizecppobj(gco2cpp(o))); break;
     case LUA_TSHRSTR:
       luaS_remove(L, gco2ts(o));  /* remove it from hash table */
       luaM_freemem(L, o, sizelstring(gco2ts(o)->shrlen));

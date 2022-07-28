@@ -104,10 +104,17 @@ typedef union Value {
   lua_CFunction f; /* light C functions */
   lua_Integer i;   /* integer numbers */
   lua_Number n;    /* float numbers */
+  unsigned long long c; /* cpp object tags */
 } Value;
 
 
-#define TValuefields	Value value_; int tt_
+#define TValuefields	\
+    Value value_; \
+    union { \
+        unsigned char tt_; \
+        /* lower 8 bits not usable (assigned to tt_) */ \
+        unsigned long long extra_; \
+    }
 
 
 typedef struct lua_TValue {
@@ -157,6 +164,8 @@ typedef struct lua_TValue {
 #define ttisfulluserdata(o)	checktag((o), ctb(LUA_TUSERDATA))
 #define ttisthread(o)		checktag((o), ctb(LUA_TTHREAD))
 #define ttisdeadkey(o)		checktag((o), LUA_TDEADKEY)
+#define ttislightcppobject(o)	checktag((o), LUA_TLIGHTCPPOBJECT)
+#define ttiscppobject(o)	checktag((o), ctb(LUA_TCPPOBJECT))
 
 
 /* Macros to access values */
@@ -175,6 +184,8 @@ typedef struct lua_TValue {
 #define hvalue(o)	check_exp(ttistable(o), gco2t(val_(o).gc))
 #define bvalue(o)	check_exp(ttisboolean(o), val_(o).b)
 #define thvalue(o)	check_exp(ttisthread(o), gco2th(val_(o).gc))
+#define cppvalue(o)	check_exp(ttiscppobject(o), gco2cpp(val_(o).gc))
+#define lcppvalue(o)	check_exp(ttislightcppobject(o), val_(o).c)
 /* a dead value may get the 'gc' field, but cannot access its contents */
 #define deadvalue(o)	check_exp(ttisdeadkey(o), cast(void *, val_(o).gc))
 
@@ -252,6 +263,14 @@ typedef struct lua_TValue {
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TTABLE)); \
     checkliveness(L,io); }
 
+#define setlightcppvalue(obj,x) \
+  { TValue *io=(obj); val_(io).c=(x); settt_(io, LUA_TLIGHTCPPOBJECT); }
+
+#define setcppvalue(L,obj,x) \
+  { TValue *io = (obj); CppUdata *x_ = (x); \
+    val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TCPPOBJECT)); \
+    checkliveness(L,io); }
+
 #define setdeadvalue(obj)	settt_(obj, LUA_TDEADKEY)
 
 
@@ -281,7 +300,9 @@ typedef struct lua_TValue {
 /* to table (define it as an expression to be used in macros) */
 #define setobj2t(L,o1,o2)  ((void)L, *(o1)=*(o2), checkliveness(L,(o1)))
 
-
+/* CPPObject-specific macros */
+#define valextra(o)     ((o)->extra_ >> 8)
+#define setvalextra(o, extra)     (o)->extra_ = ((o)->tt_ | ((unsigned long long)(extra) << 8))
 
 
 /*
@@ -378,6 +399,33 @@ typedef union UUdata {
 	{ TValue *io=(o); const Udata *iu = (u); \
 	  io->value_ = iu->user_; settt_(io, iu->ttuv_); \
 	  checkliveness(L,io); }
+
+
+/*
+** Header for C++ userdata; memory area follows the end of this structure
+** (aligned according to 'CppUUdata'; see next).
+*/
+typedef struct CppUdata {
+    CommonHeader;
+    unsigned int datalen;  /* number of bytes */
+} CppUdata;
+
+
+/*
+** Ensures that address after this type is always fully aligned.
+*/
+typedef union CppUUdata {
+    L_Umaxalign dummy;  /* ensures maximum alignment for 'local' udata */
+    CppUdata uv;
+} CppUUdata;
+
+
+/*
+**  Get the address of memory block inside 'CppUdata'.
+** (Access to 'datalen' ensures that value is really a 'CppUdata'.)
+*/
+#define getcppmem(u)  \
+  check_exp(sizeof((u)->datalen), (cast(char*, (u)) + sizeof(CppUUdata)))
 
 
 /*
@@ -515,7 +563,7 @@ typedef struct Table {
 	(check_exp((size&(size-1))==0, (cast(int, (s) & ((size)-1)))))
 
 
-#define twoto(x)	(1<<(x))
+#define twoto(x)	(((size_t)1)<<(x))
 #define sizenode(t)	(twoto((t)->lsizenode))
 
 
@@ -544,6 +592,7 @@ LUAI_FUNC const char *luaO_pushvfstring (lua_State *L, const char *fmt,
 LUAI_FUNC const char *luaO_pushfstring (lua_State *L, const char *fmt, ...);
 LUAI_FUNC void luaO_chunkid (char *out, const char *source, size_t len);
 
+LUAI_FUNC TValue* index2addr(lua_State* L, int idx);
 
 #endif
 

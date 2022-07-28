@@ -69,8 +69,10 @@ typedef struct lua_State lua_State;
 #define LUA_TFUNCTION		6
 #define LUA_TUSERDATA		7
 #define LUA_TTHREAD		8
+#define LUA_TLIGHTCPPOBJECT	9
+#define LUA_TCPPOBJECT	10
 
-#define LUA_NUMTAGS		9
+#define LUA_NUMTAGS		11
 
 
 
@@ -174,6 +176,7 @@ LUA_API int             (lua_isstring) (lua_State *L, int idx);
 LUA_API int             (lua_iscfunction) (lua_State *L, int idx);
 LUA_API int             (lua_isinteger) (lua_State *L, int idx);
 LUA_API int             (lua_isuserdata) (lua_State *L, int idx);
+LUA_API int             (lua_iscppobject) (lua_State *L, int idx);
 LUA_API int             (lua_type) (lua_State *L, int idx);
 LUA_API const char     *(lua_typename) (lua_State *L, int tp);
 
@@ -184,6 +187,8 @@ LUA_API const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
 LUA_API size_t          (lua_rawlen) (lua_State *L, int idx);
 LUA_API lua_CFunction   (lua_tocfunction) (lua_State *L, int idx);
 LUA_API void	       *(lua_touserdata) (lua_State *L, int idx);
+LUA_API unsigned long long (lua_tolightcppobject) (lua_State *L, int idx, unsigned long long* extra);
+LUA_API void           *(lua_tocppobject) (lua_State *L, int idx, unsigned long long* extra);
 LUA_API lua_State      *(lua_tothread) (lua_State *L, int idx);
 LUA_API const void     *(lua_topointer) (lua_State *L, int idx);
 
@@ -232,6 +237,7 @@ LUA_API void  (lua_pushcclosure) (lua_State *L, lua_CFunction fn, int n);
 LUA_API void  (lua_pushboolean) (lua_State *L, int b);
 LUA_API void  (lua_pushlightuserdata) (lua_State *L, void *p);
 LUA_API int   (lua_pushthread) (lua_State *L);
+LUA_API void  (lua_pushlightcppobject)(lua_State* L, unsigned long long c, unsigned long long extra);
 
 
 /*
@@ -247,6 +253,7 @@ LUA_API int (lua_rawgetp) (lua_State *L, int idx, const void *p);
 
 LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
 LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
+LUA_API void *(lua_newcppobject) (lua_State *L, unsigned long long c, unsigned long long extra, size_t sz);
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
 LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
 
@@ -328,6 +335,21 @@ LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
 LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 
+/*
+** C++ object API functions
+*/
+
+typedef struct CMetatable* (*lua_CppGetMetatable) (lua_State* L, void* val, unsigned long long extra);
+typedef struct CMetatable* (*lua_CppGetLightMetatable) (lua_State* L, unsigned long long val, unsigned long long extra);
+typedef void* (*lua_CppAlloc) (lua_State* L, size_t size);
+typedef void (*lua_CppFree) (lua_State* L, void* block, size_t size);
+
+LUA_API void (lua_setup_cppobjects)(lua_State* L, lua_CppAlloc alloc, lua_CppFree free,
+    lua_CppGetLightMetatable getlightmeta, lua_CppGetMetatable getmeta);
+
+LUA_API struct CMetatable* (lua_alloc_cmetatable)(lua_State* L);
+LUA_API void (lua_cmetatable_set)(lua_State* L, CMetatable* mt, int index, lua_CFunction func);
+LUA_API int (lua_cmetatable_push)(lua_State* L, CMetatable* mt, int index);
 
 /*
 ** {==============================================================
