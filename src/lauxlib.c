@@ -25,6 +25,7 @@
 #include "lua.h"
 
 #include "lauxlib.h"
+#include "lapi.h"
 
 
 /*
@@ -190,7 +191,7 @@ LUALIB_API int luaL_argerror (lua_State *L, int arg, const char *extramsg) {
 static int typeerror (lua_State *L, int arg, const char *tname) {
   const char *msg;
   const char *typearg;  /* name for the type of the actual argument */
-  if (luaL_getmetafield(L, arg, "__name") == LUA_TSTRING)
+  if (luaL_getmetaevent(L, arg, TM_TOSTRING) == LUA_TSTRING)
     typearg = lua_tostring(L, -1);  /* use the given type name */
   else if (lua_type(L, arg) == LUA_TLIGHTUSERDATA)
     typearg = "light userdata";  /* special name for messages */
@@ -781,6 +782,21 @@ LUALIB_API int luaL_loadstring (lua_State *L, const char *s) {
 
 
 
+LUALIB_API int luaL_getmetaevent (lua_State *L, int obj, TMS event) {
+  TValue* val;
+  TValue const* metafunc;
+  val = index2addr(L, obj);
+  metafunc = luaT_gettmbyobj(L, val, event);
+  if (!metafunc || ttisnil(metafunc))
+    return LUA_TNIL;
+  else {
+    setobj2s(L, L->top, metafunc);
+    api_incr_top(L);
+    return metafunc->tt_;
+  }
+}
+
+
 LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
   if (!lua_getmetatable(L, obj))  /* no metatable? */
     return LUA_TNIL;
@@ -794,6 +810,16 @@ LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
       lua_remove(L, -2);  /* remove only metatable */
     return tt;  /* return metafield type */
   }
+}
+
+
+LUALIB_API int luaL_callmetaevent (lua_State *L, int obj, TMS event) {
+  obj = lua_absindex(L, obj);
+  if (luaL_getmetaevent(L, obj, event) == LUA_TNIL)  /* no metafield? */
+    return 0;
+  lua_pushvalue(L, obj);
+  lua_call(L, 1, 1);
+  return 1;
 }
 
 
@@ -820,7 +846,7 @@ LUALIB_API lua_Integer luaL_len (lua_State *L, int idx) {
 
 
 LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
-  if (luaL_callmeta(L, idx, "__tostring")) {  /* metafield? */
+  if (luaL_callmetaevent(L, idx, TM_TOSTRING)) {  /* metafield? */
     if (!lua_isstring(L, -1))
       luaL_error(L, "'__tostring' must return a string");
   }
@@ -843,7 +869,7 @@ LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
         lua_pushliteral(L, "nil");
         break;
       default: {
-        int tt = luaL_getmetafield(L, idx, "__name");  /* try name */
+        int tt = luaL_getmetaevent(L, idx, TM_NAME);  /* try name */
         const char *kind = (tt == LUA_TSTRING) ? lua_tostring(L, -1) :
                                                  luaL_typename(L, idx);
         lua_pushfstring(L, "%s: %p", kind, lua_topointer(L, idx));
