@@ -77,11 +77,11 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
       mt = uvalue(o)->metatable;
       break;
     case LUA_TLIGHTCPPOBJECT: {
-      CMetatable* cmt = L->cppGetLightMetatable(L, lcppvalue(o), valextra(o));
+      CMetatable* cmt = G(L)->cppGetLightMetatable(L, lcppvalue(o), valextra(o));
       return cmt ? &cmt->funcs[event] : luaO_nilobject;
     }
     case LUA_TCPPOBJECT: {
-      CMetatable* cmt = L->cppGetMetatable(L, cppvalue(o), valextra(o));
+      CMetatable* cmt = G(L)->cppGetMetatable(L, cppvalue(o), valextra(o));
       return cmt ? &cmt->funcs[event] : luaO_nilobject;
     }
     default:

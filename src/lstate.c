@@ -236,10 +236,6 @@ static void preinit_thread (lua_State *L, global_State *g) {
   L->nny = 1;
   L->status = LUA_OK;
   L->errfunc = 0;
-  L->cppGetMetatable = NULL;
-  L->cppGetLightMetatable = NULL;
-  L->cppAlloc = NULL;
-  L->cppFree = NULL;
 }
 
 
@@ -332,6 +328,12 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->gcfinnum = 0;
   g->gcpause = LUAI_GCPAUSE;
   g->gcstepmul = LUAI_GCMUL;
+
+  g->cppGetMetatable = NULL;
+  g->cppGetLightMetatable = NULL;
+  g->cppAlloc = NULL;
+  g->cppFree = NULL;
+
   for (i=0; i < LUA_NUMTAGS; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != LUA_OK) {
     /* memory allocation error: free partial state */

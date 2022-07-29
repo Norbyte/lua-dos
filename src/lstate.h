@@ -163,6 +163,10 @@ typedef struct global_State {
   int gcpause;  /* size of pause between successive GCs */
   int gcstepmul;  /* GC 'granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
+  lua_CppGetMetatable cppGetMetatable;
+  lua_CppGetLightMetatable cppGetLightMetatable;
+  lua_CppAlloc cppAlloc;
+  lua_CppFree cppFree;
   struct lua_State *mainthread;
   const lua_Number *version;  /* pointer to version number */
   TString *memerrmsg;  /* memory-error message */
@@ -199,10 +203,6 @@ struct lua_State {
   unsigned short nCcalls;  /* number of nested C calls */
   l_signalT hookmask;
   lu_byte allowhook;
-  lua_CppGetMetatable cppGetMetatable;
-  lua_CppGetLightMetatable cppGetLightMetatable;
-  lua_CppAlloc cppAlloc;
-  lua_CppFree cppFree;
 };
 
 

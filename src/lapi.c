@@ -144,10 +144,10 @@ LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf) {
 LUA_API void (lua_setup_cppobjects)(lua_State* L, lua_CppAlloc alloc, lua_CppFree free,
     lua_CppGetLightMetatable getlightmeta, lua_CppGetMetatable getmeta) {
     lua_lock(L);
-    L->cppAlloc = alloc;
-    L->cppFree = free;
-    L->cppGetLightMetatable = getlightmeta;
-    L->cppGetMetatable = getmeta;
+    L->l_G->cppAlloc = alloc;
+    L->l_G->cppFree = free;
+    L->l_G->cppGetLightMetatable = getlightmeta;
+    L->l_G->cppGetMetatable = getmeta;
     lua_unlock(L);
 }
 
