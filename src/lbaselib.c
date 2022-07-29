@@ -115,13 +115,20 @@ static int luaB_error (lua_State *L) {
 
 
 static int luaB_getmetatable (lua_State *L) {
+  int type;
   luaL_checkany(L, 1);
-  if (!lua_getmetatable(L, 1)) {
-    lua_pushnil(L);
-    return 1;  /* no metatable */
+  type = lua_type(L, 1);
+  if (type == LUA_TLIGHTCPPOBJECT || type == LUA_TCPPOBJECT) {
+    return luaL_callmetaevent(L, 1, TM_NAME);
   }
-  luaL_getmetafield(L, 1, "__metatable");
-  return 1;  /* returns either __metatable field (if present) or metatable */
+  else {
+    if (!lua_getmetatable(L, 1)) {
+      lua_pushnil(L);
+      return 1;  /* no metatable */
+    }
+    luaL_getmetafield(L, 1, "__metatable");
+    return 1;  /* returns either __metatable field (if present) or metatable */
+  }
 }
 
 
