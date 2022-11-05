@@ -405,53 +405,78 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
 ** L == NULL means raw equality (no metamethods)
 */
 int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
-  const TValue *tm;
-  if (ttype(t1) != ttype(t2)) {  /* not the same variant? */
-    if (ttnov(t1) != ttnov(t2) || ttnov(t1) != LUA_TNUMBER)
-      return 0;  /* only numbers can be equal with different variants */
-    else {  /* two numbers with different variants */
-      lua_Integer i1, i2;  /* compare them as integers */
-      return (tointeger(t1, &i1) && tointeger(t2, &i2) && i1 == i2);
-    }
-  }
-  /* values have same type and same variant */
-  switch (ttype(t1)) {
-    case LUA_TNIL: return 1;
-    case LUA_TNUMINT: return (ivalue(t1) == ivalue(t2));
-    case LUA_TNUMFLT: return luai_numeq(fltvalue(t1), fltvalue(t2));
-    case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
-    case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
-    case LUA_TLCF: return fvalue(t1) == fvalue(t2);
-    case LUA_TSHRSTR: return eqshrstr(tsvalue(t1), tsvalue(t2));
-    case LUA_TLNGSTR: return luaS_eqlngstr(tsvalue(t1), tsvalue(t2));
-    case LUA_TUSERDATA: {
-      if (uvalue(t1) == uvalue(t2)) return 1;
-      else if (L == NULL) return 0;
-      tm = fasttm(L, uvalue(t1)->metatable, TM_EQ);
-      if (tm == NULL)
-        tm = fasttm(L, uvalue(t2)->metatable, TM_EQ);
-      break;  /* will try TM */
-    }
-    case LUA_TTABLE: {
-      if (hvalue(t1) == hvalue(t2)) return 1;
-      else if (L == NULL) return 0;
-      tm = fasttm(L, hvalue(t1)->metatable, TM_EQ);
-      if (tm == NULL)
-        tm = fasttm(L, hvalue(t2)->metatable, TM_EQ);
-      break;  /* will try TM */
-    }
-    case LUA_TLIGHTCPPOBJECT: return lcppvalue(t1) == lcppvalue(t2);
-    case LUA_TCPPOBJECT: {
-        if (cppvalue(t1) == cppvalue(t2)) return 1;
-        else if (L == NULL) return 0;
+  const TValue *tm = NULL;
+  if (ttype(t1) != ttype(t2)) {   /* not the same variant? */
+    /* cppobjects can override __eq even with different types */
+    if (L != NULL) {
+      if (ttype(t1) == LUA_TLIGHTCPPOBJECT || ttype(t1) == LUA_TCPPOBJECT) {
         tm = luaT_gettmbyobj(L, t1, TM_EQ);
-        if (tm == NULL)
-            tm = luaT_gettmbyobj(L, t2, TM_EQ);
-        break;  /* will try TM */
+      } else if (ttype(t2) == LUA_TLIGHTCPPOBJECT || ttype(t2) == LUA_TCPPOBJECT) {
+        tm = luaT_gettmbyobj(L, t2, TM_EQ);
+      }
     }
-    default:
-      return gcvalue(t1) == gcvalue(t2);
+
+    if (tm == NULL) {
+      if (ttnov(t1) != ttnov(t2) || ttnov(t1) != LUA_TNUMBER)
+        return 0;  /* only numbers can be equal with different variants */
+      else {  /* two numbers with different variants */
+        lua_Integer i1, i2;  /* compare them as integers */
+        return (tointeger(t1, &i1) && tointeger(t2, &i2) && i1 == i2);
+      }
+    }
+  } else {
+
+    /* values have same type and same variant */
+    switch (ttype(t1)) {
+      case LUA_TNIL: return 1;
+      case LUA_TNUMINT: return (ivalue(t1) == ivalue(t2));
+      case LUA_TNUMFLT: return luai_numeq(fltvalue(t1), fltvalue(t2));
+      case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
+      case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
+      case LUA_TLCF: return fvalue(t1) == fvalue(t2);
+      case LUA_TSHRSTR: return eqshrstr(tsvalue(t1), tsvalue(t2));
+      case LUA_TLNGSTR: return luaS_eqlngstr(tsvalue(t1), tsvalue(t2));
+      case LUA_TUSERDATA: {
+        if (uvalue(t1) == uvalue(t2)) return 1;
+        else if (L == NULL) return 0;
+        tm = fasttm(L, uvalue(t1)->metatable, TM_EQ);
+        if (tm == NULL)
+          tm = fasttm(L, uvalue(t2)->metatable, TM_EQ);
+        break;  /* will try TM */
+      }
+      case LUA_TTABLE: {
+        if (hvalue(t1) == hvalue(t2)) return 1;
+        else if (L == NULL) return 0;
+        tm = fasttm(L, hvalue(t1)->metatable, TM_EQ);
+        if (tm == NULL)
+          tm = fasttm(L, hvalue(t2)->metatable, TM_EQ);
+        break;  /* will try TM */
+      }
+      case LUA_TLIGHTCPPOBJECT: {
+          if (ttype(t2) == LUA_TLIGHTCPPOBJECT 
+              && lcppvalue(t1) == lcppvalue(t2)
+              && valextra(t1) == valextra(t2)) {
+            return 1;
+          }
+          else if (L == NULL) return 0;
+          tm = luaT_gettmbyobj(L, t1, TM_EQ);
+          if (tm == NULL)
+            tm = luaT_gettmbyobj(L, t2, TM_EQ);
+          break;  /* will try TM */
+      }
+      case LUA_TCPPOBJECT: {
+          if (cppvalue(t1) == cppvalue(t2)) return 1;
+          else if (L == NULL) return 0;
+          tm = luaT_gettmbyobj(L, t1, TM_EQ);
+          if (tm == NULL)
+            tm = luaT_gettmbyobj(L, t2, TM_EQ);
+          break;  /* will try TM */
+      }
+      default:
+        return gcvalue(t1) == gcvalue(t2);
+    }
   }
+
   if (tm == NULL)  /* no TM? */
     return 0;  /* objects are different */
   luaT_callTM(L, tm, t1, t2, L->top, 1);  /* call TM */
