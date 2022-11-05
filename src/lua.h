@@ -379,12 +379,14 @@ typedef struct CMetatable* (*lua_CppGetMetatable) (lua_State* L, void* val, unsi
 typedef struct CMetatable* (*lua_CppGetLightMetatable) (lua_State* L, unsigned long long val, unsigned long long extra);
 typedef void* (*lua_CppAlloc) (lua_State* L, size_t size);
 typedef void (*lua_CppFree) (lua_State* L, void* block, size_t size);
+typedef void* (*lua_CppCanonicalize) (lua_State* L, void* val);
 
 LUA_API void (lua_setup_cppobjects)(lua_State* L, lua_CppAlloc alloc, lua_CppFree free,
-    lua_CppGetLightMetatable getlightmeta, lua_CppGetMetatable getmeta);
+    lua_CppGetLightMetatable getlightmeta, lua_CppGetMetatable getmeta, lua_CppCanonicalize canonicalize);
 
 LUA_API struct CMetatable* (lua_alloc_cmetatable)(lua_State* L);
 LUA_API void (lua_cmetatable_set)(lua_State* L, CMetatable* mt, int index, lua_CFunction func);
+LUA_API lua_CFunction (lua_cmetatable_get)(lua_State* L, CMetatable* mt, int index);
 LUA_API int (lua_cmetatable_push)(lua_State* L, CMetatable* mt, int index);
 
 

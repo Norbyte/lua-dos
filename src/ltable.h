@@ -41,11 +41,12 @@
 
 
 LUAI_FUNC const TValue *luaH_getint (Table *t, lua_Integer key);
+LUAI_FUNC const TValue *luaH_getint (lua_State* L, Table *t, lua_Integer key);
 LUAI_FUNC void luaH_setint (lua_State *L, Table *t, lua_Integer key,
                                                     TValue *value);
-LUAI_FUNC const TValue *luaH_getshortstr (Table *t, TString *key);
-LUAI_FUNC const TValue *luaH_getstr (Table *t, TString *key);
-LUAI_FUNC const TValue *luaH_get (Table *t, const TValue *key);
+LUAI_FUNC const TValue *luaH_getshortstr (lua_State* L, Table *t, TString *key);
+LUAI_FUNC const TValue *luaH_getstr (lua_State* L, Table *t, TString *key);
+LUAI_FUNC const TValue *luaH_get (lua_State* L, Table *t, const TValue *key);
 LUAI_FUNC TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key);
 LUAI_FUNC TValue *luaH_set (lua_State *L, Table *t, const TValue *key);
 LUAI_FUNC Table *luaH_new (lua_State *L);

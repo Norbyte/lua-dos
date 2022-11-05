@@ -110,6 +110,29 @@ static int l_hashfloat (lua_Number n) {
 #endif
 
 
+TValue* canonicalize_key (lua_State* L, TValue *key) {
+  switch (ttype(key)) {
+    case LUA_TLIGHTCPPOBJECT:
+    case LUA_TCPPOBJECT:
+    {
+      if (L && L->l_G->cppCanonicalize) {
+        auto canonical = (TValue*)L->l_G->cppCanonicalize(L, key);
+        if (canonical != NULL) {
+          return canonical;
+        }
+      }
+      break;
+    }
+  }
+
+  return key;
+}
+
+const TValue* canonicalize_ckey (lua_State* L, const TValue *key) {
+  return canonicalize_key(L, (TValue *)key);
+}
+
+
 /*
 ** returns the 'main' position of an element in a table (that is, the index
 ** of its hash value)
@@ -130,6 +153,10 @@ static Node *mainposition (const Table *t, const TValue *key) {
       return hashpointer(t, pvalue(key));
     case LUA_TLCF:
       return hashpointer(t, fvalue(key));
+    case LUA_TLIGHTCPPOBJECT:
+      return hashpointer(t, lcppvalue(key) ^ valextra(key));
+    case LUA_TCPPOBJECT:
+      return hashpointer(t, (uintptr_t)cppvalue(key) ^ valextra(key));
     default:
       lua_assert(!ttisdeadkey(key));
       return hashpointer(t, gcvalue(key));
@@ -164,6 +191,7 @@ static unsigned int findindex (lua_State *L, Table *t, StkId key) {
     return i;  /* yes; that's the index */
   else {
     int nx;
+    key = canonicalize_key(L, key);
     Node *n = mainposition(t, key);
     for (;;) {  /* check whether 'key' is somewhere in the chain */
       /* key may be dead already, but it is ok to use it in 'next' */
@@ -471,6 +499,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
     else if (luai_numisnan(fltvalue(key)))
       luaG_runerror(L, "table index is NaN");
   }
+  key = canonicalize_ckey(L, key);
   mp = mainposition(t, key);
   if (!ttisnil(gval(mp)) || isdummy(t)) {  /* main position is taken? */
     Node *othern;
@@ -481,7 +510,8 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
       return luaH_set(L, t, key);  /* insert key into grown table */
     }
     lua_assert(!isdummy(t));
-    othern = mainposition(t, gkey(mp));
+    const TValue* mpkey = canonicalize_ckey(L, gkey(mp));
+    othern = mainposition(t, mpkey);
     if (othern != mp) {  /* is colliding node out of its main position? */
       /* yes; move colliding node into free position */
       while (othern + gnext(othern) != mp)  /* find previous */
@@ -532,11 +562,15 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
   }
 }
 
+const TValue *luaH_getint (lua_State* L, Table *t, lua_Integer key) {
+  return luaH_getint(t, key);
+}
+
 
 /*
 ** search function for short strings
 */
-const TValue *luaH_getshortstr (Table *t, TString *key) {
+const TValue *luaH_getshortstr (lua_State* L, Table *t, TString *key) {
   Node *n = hashstr(t, key);
   lua_assert(key->tt == LUA_TSHRSTR);
   for (;;) {  /* check whether 'key' is somewhere in the chain */
@@ -557,7 +591,8 @@ const TValue *luaH_getshortstr (Table *t, TString *key) {
 ** "Generic" get version. (Not that generic: not valid for integers,
 ** which may be in array part, nor for floats with integral values.)
 */
-static const TValue *getgeneric (Table *t, const TValue *key) {
+static const TValue *getgeneric (lua_State* L, Table *t, const TValue *key) {
+  key = canonicalize_ckey(L, key);
   Node *n = mainposition(t, key);
   for (;;) {  /* check whether 'key' is somewhere in the chain */
     if (luaV_rawequalobj(gkey(n), key))
@@ -572,13 +607,13 @@ static const TValue *getgeneric (Table *t, const TValue *key) {
 }
 
 
-const TValue *luaH_getstr (Table *t, TString *key) {
+const TValue *luaH_getstr (lua_State* L, Table *t, TString *key) {
   if (key->tt == LUA_TSHRSTR)
-    return luaH_getshortstr(t, key);
+    return luaH_getshortstr(L, t, key);
   else {  /* for long strings, use generic case */
     TValue ko;
     setsvalue(cast(lua_State *, NULL), &ko, key);
-    return getgeneric(t, &ko);
+    return getgeneric(L, t, &ko);
   }
 }
 
@@ -586,9 +621,9 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 /*
 ** main search function
 */
-const TValue *luaH_get (Table *t, const TValue *key) {
+const TValue *luaH_get (lua_State* L, Table *t, const TValue *key) {
   switch (ttype(key)) {
-    case LUA_TSHRSTR: return luaH_getshortstr(t, tsvalue(key));
+    case LUA_TSHRSTR: return luaH_getshortstr(L, t, tsvalue(key));
     case LUA_TNUMINT: return luaH_getint(t, ivalue(key));
     case LUA_TNIL: return luaO_nilobject;
     case LUA_TNUMFLT: {
@@ -598,7 +633,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
       /* else... */
     }  /* FALLTHROUGH */
     default:
-      return getgeneric(t, key);
+      return getgeneric(L, t, key);
   }
 }
 
@@ -608,7 +643,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
 ** barrier and invalidate the TM cache.
 */
 TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
-  const TValue *p = luaH_get(t, key);
+  const TValue *p = luaH_get(L, t, key);
   if (p != luaO_nilobject)
     return cast(TValue *, p);
   else return luaH_newkey(L, t, key);

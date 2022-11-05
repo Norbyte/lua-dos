@@ -333,6 +333,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->cppGetLightMetatable = NULL;
   g->cppAlloc = NULL;
   g->cppFree = NULL;
+  g->cppCanonicalize = NULL;
 
 #if LUA_STRING_CACHING == 1
   g->cacheString = NULL;

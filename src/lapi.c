@@ -142,12 +142,13 @@ LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf) {
 
 
 LUA_API void (lua_setup_cppobjects)(lua_State* L, lua_CppAlloc alloc, lua_CppFree free,
-    lua_CppGetLightMetatable getlightmeta, lua_CppGetMetatable getmeta) {
+    lua_CppGetLightMetatable getlightmeta, lua_CppGetMetatable getmeta, lua_CppCanonicalize canonicalize) {
     lua_lock(L);
     L->l_G->cppAlloc = alloc;
     L->l_G->cppFree = free;
     L->l_G->cppGetLightMetatable = getlightmeta;
     L->l_G->cppGetMetatable = getmeta;
+    L->l_G->cppCanonicalize = canonicalize;
     lua_unlock(L);
 }
 
@@ -732,7 +733,7 @@ LUA_API int lua_rawget (lua_State *L, int idx) {
   lua_lock(L);
   t = index2addr(L, idx);
   api_check(L, ttistable(t), "table expected");
-  setobj2s(L, L->top - 1, luaH_get(hvalue(t), L->top - 1));
+  setobj2s(L, L->top - 1, luaH_get(L, hvalue(t), L->top - 1));
   lua_unlock(L);
   return ttnov(L->top - 1);
 }
@@ -757,7 +758,7 @@ LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
   t = index2addr(L, idx);
   api_check(L, ttistable(t), "table expected");
   setpvalue(&k, cast(void *, p));
-  setobj2s(L, L->top, luaH_get(hvalue(t), &k));
+  setobj2s(L, L->top, luaH_get(L, hvalue(t), &k));
   api_incr_top(L);
   lua_unlock(L);
   return ttnov(L->top - 1);
