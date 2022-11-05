@@ -535,7 +535,7 @@ typedef union TKey {
 /* copy a value into a key without messing up field 'next' */
 #define setnodekey(L,key,obj) \
 	{ TKey *k_=(key); const TValue *io_=(obj); \
-	  k_->nk.value_ = io_->value_; k_->nk.tt_ = io_->tt_; \
+	  k_->nk.value_ = io_->value_; k_->nk.tt_ = io_->tt_; k_->nk.extra_ = io_->extra_; \
 	  (void)L; checkliveness(L,io_); }
 
 
