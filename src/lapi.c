@@ -168,6 +168,12 @@ LUA_API void lua_cmetatable_set(lua_State* L, CMetatable* mt, int index, lua_CFu
     lua_unlock(L);
 }
 
+LUA_API lua_CFunction lua_cmetatable_get(lua_State* L, CMetatable* mt, int index) {
+    TValue* fun = &mt->funcs[index];
+    if (ttisnil(fun)) return NULL;
+    return fvalue(fun);
+}
+
 LUA_API int lua_cmetatable_push(lua_State* L, CMetatable* mt, int index) {
     TValue* fun = &mt->funcs[index];
     if (ttisnil(fun)) return 0;
@@ -177,6 +183,11 @@ LUA_API int lua_cmetatable_push(lua_State* L, CMetatable* mt, int index) {
     api_incr_top(L);
     lua_unlock(L);
     return 1;
+}
+
+LUA_API void lua_setup_strcache(lua_State* L, lua_CacheString cache, lua_ReleaseString release) {
+  G(L)->cacheString = cache;
+  G(L)->releaseString = release;
 }
 
 LUA_API const lua_Number *lua_version (lua_State *L) {

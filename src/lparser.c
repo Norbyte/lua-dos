@@ -149,6 +149,9 @@ static void init_exp (expdesc *e, expkind k, int i) {
 
 
 static void codestring (LexState *ls, expdesc *e, TString *s) {
+#if LUA_STRING_CACHING == 1
+  G(ls->L)->cacheString(ls->L, s);
+#endif
   init_exp(e, VK, luaK_stringK(ls->fs, s));
 }
 

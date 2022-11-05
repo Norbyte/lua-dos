@@ -139,6 +139,9 @@ static TString *createstrobj (lua_State *L, size_t l, int tag, unsigned int h) {
   ts = gco2ts(o);
   ts->hash = h;
   ts->extra = 0;
+#if LUA_STRING_CACHING == 1
+  ts->cache = (LUA_STRING_EXTRAINITVAL);
+#endif
   getstr(ts)[l] = '\0';  /* ending 0 */
   return ts;
 }

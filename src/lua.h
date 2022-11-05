@@ -387,6 +387,15 @@ LUA_API struct CMetatable* (lua_alloc_cmetatable)(lua_State* L);
 LUA_API void (lua_cmetatable_set)(lua_State* L, CMetatable* mt, int index, lua_CFunction func);
 LUA_API int (lua_cmetatable_push)(lua_State* L, CMetatable* mt, int index);
 
+
+#if LUA_STRING_CACHING == 1
+struct TString;
+typedef void (*lua_CacheString) (lua_State* L, TString* s);
+typedef void (*lua_ReleaseString) (lua_State* L, TString* s);
+
+LUA_API void (lua_setup_strcache)(lua_State* L, lua_CacheString cache, lua_ReleaseString release);
+#endif
+
 /*
 ** {==============================================================
 ** some useful macros

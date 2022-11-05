@@ -167,6 +167,10 @@ typedef struct global_State {
   lua_CppGetLightMetatable cppGetLightMetatable;
   lua_CppAlloc cppAlloc;
   lua_CppFree cppFree;
+#if LUA_STRING_CACHING == 1
+  lua_CacheString cacheString;
+  lua_ReleaseString releaseString;
+#endif
   struct lua_State *mainthread;
   const lua_Number *version;  /* pointer to version number */
   TString *memerrmsg;  /* memory-error message */

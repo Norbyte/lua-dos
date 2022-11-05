@@ -330,6 +330,9 @@ typedef struct TString {
     size_t lnglen;  /* length for long strings */
     struct TString *hnext;  /* linked list for hash table */
   } u;
+#if LUA_STRING_CACHING == 1
+  LUA_STRING_EXTRATYPE cache;
+#endif
 } TString;
 
 

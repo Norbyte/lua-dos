@@ -741,6 +741,24 @@
 
 
 /*
+@@ LUA_STRING_CACHING defines whether the string caching API is enabled.
+*/
+#define LUA_STRING_CACHING 1
+
+/*
+@@ LUA_STRING_EXTRATYPE defines the additional raw memory allocated 
+** in strings when string caching is enabled.
+*/
+#define LUA_STRING_EXTRATYPE void *
+
+/*
+@@ LUA_STRING_EXTRAINITVAL defines the initial value for the 
+** additional string memory area.
+*/
+#define LUA_STRING_EXTRAINITVAL NULL
+
+
+/*
 @@ LUA_IDSIZE gives the maximum size for the description of the source
 @@ of a function in debug information.
 ** CHANGE it if you want a different size.

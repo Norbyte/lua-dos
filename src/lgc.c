@@ -725,10 +725,16 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_TUSERDATA: luaM_freemem(L, o, sizeudata(gco2u(o))); break;
     case LUA_TCPPOBJECT: luaM_freecppmem(L, gco2cpp(o), sizecppobj(gco2cpp(o))); break;
     case LUA_TSHRSTR:
+#if LUA_STRING_CACHING == 1
+      G(L)->releaseString(L, gco2ts(o));
+#endif
       luaS_remove(L, gco2ts(o));  /* remove it from hash table */
       luaM_freemem(L, o, sizelstring(gco2ts(o)->shrlen));
       break;
     case LUA_TLNGSTR: {
+#if LUA_STRING_CACHING == 1
+      G(L)->releaseString(L, gco2ts(o));
+#endif
       luaM_freemem(L, o, sizelstring(gco2ts(o)->u.lnglen));
       break;
     }
@@ -825,6 +831,7 @@ static void GCTM (lua_State *L, int propagateerrors) {
   const TValue *tm;
   TValue v;
   setgcovalue(L, &v, udata2finalize(g));
+
   tm = luaT_gettmbyobj(L, &v, TM_GC);
   if (tm != NULL && ttisfunction(tm)) {  /* is there a finalizer? */
     int status;

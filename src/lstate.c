@@ -334,6 +334,11 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->cppAlloc = NULL;
   g->cppFree = NULL;
 
+#if LUA_STRING_CACHING == 1
+  g->cacheString = NULL;
+  g->releaseString = NULL;
+#endif
+
   for (i=0; i < LUA_NUMTAGS; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != LUA_OK) {
     /* memory allocation error: free partial state */
