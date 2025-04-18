@@ -659,8 +659,7 @@ LUA_API int lua_pushthread (lua_State *L) {
 
 LUA_API void lua_pushlightcppobject(lua_State* L, unsigned long long c, unsigned long long extra) {
     lua_lock(L);
-    setlightcppvalue(L->top, c);
-    setvalextra(L->top, extra);
+    setlightcppvalue(L->top, c, extra);
     api_incr_top(L);
     lua_unlock(L);
 }
@@ -1279,12 +1278,11 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 }
 
 
-LUA_API void* lua_newcppobject(lua_State* L, unsigned long long c, 
-    unsigned long long extra, size_t size) {
+LUA_API void* lua_newcppobject(lua_State* L, unsigned long long extra, size_t size) {
     CppUdata* cpp;
     lua_lock(L);
     cpp = luaS_newcppobject(L, size);
-    setcppvalue(L, L->top, cpp);
+    setcppvalue(L, L->top, cpp, extra);
     api_incr_top(L);
     luaC_checkGC(L);
     lua_unlock(L);
