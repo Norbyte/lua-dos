@@ -708,6 +708,10 @@ static void freeLclosure (lua_State *L, LClosure *cl) {
   luaM_freemem(L, cl, sizeLclosure(cl->nupvalues));
 }
 
+static void freecppobj(lua_State* L, CppUdata* o) {
+  G(L)->cppFinalize(L, getcppmem(o));
+  luaM_freecppmem(L, o, sizecppobj(o));
+}
 
 static void freeobj (lua_State *L, GCObject *o) {
   switch (o->tt) {
@@ -723,7 +727,7 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_TTABLE: luaH_free(L, gco2t(o)); break;
     case LUA_TTHREAD: luaE_freethread(L, gco2th(o)); break;
     case LUA_TUSERDATA: luaM_freemem(L, o, sizeudata(gco2u(o))); break;
-    case LUA_TCPPOBJECT: luaM_freecppmem(L, gco2cpp(o), sizecppobj(gco2cpp(o))); break;
+    case LUA_TCPPOBJECT: freecppobj(L, gco2cpp(o)); break;
     case LUA_TSHRSTR:
 #if LUA_STRING_CACHING == 1
       G(L)->releaseString(L, gco2ts(o));

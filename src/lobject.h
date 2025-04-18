@@ -263,12 +263,14 @@ typedef struct lua_TValue {
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TTABLE)); \
     checkliveness(L,io); }
 
-#define setlightcppvalue(obj,x) \
-  { TValue *io=(obj); val_(io).c=(x); settt_(io, LUA_TLIGHTCPPOBJECT); }
+#define setlightcppvalue(obj,x,extra) \
+  { TValue *io=(obj); val_(io).c=(x); \
+    (io)->extra_ = LUA_TLIGHTCPPOBJECT | ((unsigned long long)(extra) << 8); }
 
-#define setcppvalue(L,obj,x) \
+#define setcppvalue(L,obj,x,extra) \
   { TValue *io = (obj); CppUdata *x_ = (x); \
-    val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TCPPOBJECT)); \
+    val_(io).gc = obj2gco(x_); \
+    (io)->extra_ = ctb(LUA_TCPPOBJECT) | ((unsigned long long)(extra) << 8); \
     checkliveness(L,io); }
 
 #define setdeadvalue(obj)	settt_(obj, LUA_TDEADKEY)
@@ -302,7 +304,6 @@ typedef struct lua_TValue {
 
 /* CPPObject-specific macros */
 #define valextra(o)     ((o)->extra_ >> 8)
-#define setvalextra(o, extra)     (o)->extra_ = ((o)->tt_ | ((unsigned long long)(extra) << 8))
 
 
 /*

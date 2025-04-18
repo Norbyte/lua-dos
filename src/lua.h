@@ -253,7 +253,7 @@ LUA_API int (lua_rawgetp) (lua_State *L, int idx, const void *p);
 
 LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
 LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
-LUA_API void *(lua_newcppobject) (lua_State *L, unsigned long long c, unsigned long long extra, size_t sz);
+LUA_API void *(lua_newcppobject) (lua_State *L, unsigned long long extra, size_t sz);
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
 LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
 
@@ -375,14 +375,15 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 ** C++ object API functions
 */
 
-typedef struct CMetatable* (*lua_CppGetMetatable) (lua_State* L, void* val, unsigned long long extra);
+typedef struct CMetatable* (*lua_CppGetMetatable) (lua_State* L, void* udata, unsigned long long size);
 typedef struct CMetatable* (*lua_CppGetLightMetatable) (lua_State* L, unsigned long long val, unsigned long long extra);
 typedef void* (*lua_CppAlloc) (lua_State* L, size_t size);
 typedef void (*lua_CppFree) (lua_State* L, void* block, size_t size);
+typedef void (*lua_CppFinalize) (lua_State* L, void* val);
 typedef void* (*lua_CppCanonicalize) (lua_State* L, void* val);
 
 LUA_API void (lua_setup_cppobjects)(lua_State* L, lua_CppAlloc alloc, lua_CppFree free,
-    lua_CppGetLightMetatable getlightmeta, lua_CppGetMetatable getmeta, lua_CppCanonicalize canonicalize);
+    lua_CppGetLightMetatable getlightmeta, lua_CppGetMetatable getmeta, lua_CppFinalize finalize, lua_CppCanonicalize canonicalize);
 
 LUA_API struct CMetatable* (lua_alloc_cmetatable)(lua_State* L);
 LUA_API void (lua_cmetatable_set)(lua_State* L, CMetatable* mt, int index, lua_CFunction func);

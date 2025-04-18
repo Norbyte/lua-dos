@@ -167,6 +167,7 @@ typedef struct global_State {
   lua_CppGetLightMetatable cppGetLightMetatable;
   lua_CppAlloc cppAlloc;
   lua_CppFree cppFree;
+  lua_CppFinalize cppFinalize;
   lua_CppCanonicalize cppCanonicalize;
 #if LUA_STRING_CACHING == 1
   lua_CacheString cacheString;
